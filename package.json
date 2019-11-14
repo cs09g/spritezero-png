@@ -1,0 +1,27 @@
+{
+  "name": "spritezero-png",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "bin": {
+    "spritezeropng": "src/index"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cs09g/spritezero-png.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/cs09g/spritezero-png/issues"
+  },
+  "homepage": "https://github.com/cs09g/spritezero-png#readme",
+  "devDependencies": {
+    "canvas": "^2.6.0",
+    "d3-queue": "^3.0.7"
+  }
+}

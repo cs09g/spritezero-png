@@ -1,0 +1,142 @@
+#!/usr/bin/env node
+
+const ShelfPack = require("../src/shelf-pack/shelf-pack");
+
+const fs = require("fs");
+const queue = require("queue-async");
+const path = require("path");
+const {createCanvas, loadImage} = require("canvas");
+const argv = require("minimist")(process.argv.slice(2));
+
+const outfolder = argv.o;
+
+/**
+ * Suppose the index of paths argument means pixelRatio.
+ * 
+ * for example,
+ * paths = [A, B, C] means,
+ * A: { pixelRatio: 1 }
+ * B: { pixelRatio: 2 }
+ * C: { pixelRatio: 3 }
+ */
+const paths = argv._;
+
+const spritesInfo = [];
+
+generateSprites(paths);
+
+function generateSprites(paths) {
+  paths.forEach(async (path, index) => {
+    await generateSprite(path, { pixelRatio: index + 1 });
+  });
+}
+
+function generateSprite(path, options = { pixelRatio: 1 }) {
+  const imageLoadQueue = queue(16);
+
+  getSubFilePaths(path).forEach((file) => {
+    imageLoadQueue.defer(loadFile, file);
+  });
+
+  imageLoadQueue.awaitAll((err, buffers) => {
+    if (err) throw new Error(err);
+
+    const imagesInfo = layoutSprite(buffers);
+    let outFilePath = `${outfolder}/sprite`;
+
+    spritesInfo.push(imagesInfo);
+
+    if (options.pixelRatio !== 1) {
+      outFilePath += `@${options.pixelRatio}x`;
+    }
+    
+    const canvasSize = [
+      Math.max(...imagesInfo.map((imageInfo) => imageInfo.x + imageInfo.width)),
+      Math.max(...imagesInfo.map((imageInfo) => imageInfo.y + imageInfo.height)),
+    ];
+  
+    const canvas = createCanvas(...canvasSize);
+    const ctx = canvas.getContext("2d");
+    const drawingImageQueue = queue(16);
+
+    for (let i = 0, len = imagesInfo.length; i < len; i++) {
+      drawingImageQueue.defer(drawImage, buffers, imagesInfo[i], ctx);
+    }
+
+    drawingImageQueue.awaitAll(() => {
+      saveImage(outFilePath, canvas);
+      saveJSON(outFilePath, imagesInfo, options.pixelRatio);
+    });
+  });
+}
+
+function drawImage(buffers, imageInfo, canvasContext, callback) {
+  loadImage(buffers.find((buffer) => buffer.id === imageInfo.id).png)
+    .then((image) => {if (imageInfo === undefined) { console.log(image)}
+      canvasContext.drawImage(image, imageInfo.x, imageInfo.y, imageInfo.width, imageInfo.height);
+      callback();
+    })
+    .catch((e) => {
+      throw new Error(e);
+    });
+}
+
+function layoutSprite(buffers) {
+  const sprite = new ShelfPack(1, 1, { autoResize: true });
+
+  // thanks to:
+  // https://github.com/image-size/image-size/blob/master/lib/types/png.ts#L24
+  const idx = (buffers[0].png.toString("ascii", 12, 16) === "CgBI") ? 36 : 20;
+  const imagesInfo = buffers.map((buffer) => {
+    return {
+      id: buffer.id,
+      height: buffer.png.readUInt32BE(idx),
+      width: buffer.png.readUInt32BE(idx - 4),
+      pixelRatio: 1,
+    };
+  });
+
+  imagesInfo.sort((a, b) => b.width * b.height - a.width * a.height);
+  sprite.pack(imagesInfo, { inPlace: true });
+
+  return imagesInfo;
+}
+
+function getSubFilePaths (dir) {
+  return fs.readdirSync(dir)
+    .filter((d) => d.match(/\.png$/))
+    .map((d) => path.join(dir, d));
+}
+
+function loadFile (file, callback) {
+  fs.readFile(file, (err, res) => callback(err, {
+    png: res,
+    id: path.basename(file).replace(".png", ""),
+  }));
+}
+
+function saveImage(filepath, canvas) {
+  fs.writeFileSync(`${filepath}.png`, canvas.toBuffer());
+}
+
+function saveJSON(filepath, imagesInfo, pixelRatio) {
+  const spriteJSON = {};
+
+  imagesInfo.forEach((imageInfo) => {
+    if (pixelRatio !== 1 && spritesInfo[0]) {
+      const originalImageInfo = spritesInfo[0].find((originalSpriteInfo) => originalSpriteInfo.id === imageInfo.id);
+      const originalSize = Math.min(originalImageInfo.width, originalImageInfo.height);
+      imageInfo.pixelRatio = +(imageInfo.height / originalSize).toFixed(3);
+    }
+
+    spriteJSON[isNaN(+imageInfo.id) ? imageInfo.id : +imageInfo.id + ""] = {
+      width: imageInfo.width,
+      height: imageInfo.height,
+      x: imageInfo.x,
+      y: imageInfo.y,
+      pixelRatio: imageInfo.pixelRatio,
+    };
+  });
+
+  fs.writeFileSync(`${filepath}.json`, JSON.stringify(spriteJSON), "utf8");
+}
