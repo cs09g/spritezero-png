@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/cs09g/spritezero-png#readme",
   "devDependencies": {
+    "@mapbox/shelf-pack": "^3.2.0",
     "canvas": "^2.6.0",
     "d3-queue": "^3.0.7"
   }
