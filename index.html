@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+  <head>
+    <link href="./src/style/index.css" type="text/css" rel="stylesheet"></style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="section">
+        <h3>Select images</h3>
+        <h5><label for="sprite">for sprite: </label><input id="sprite" class="files" type="file" multiple></h5>
+        <h5><label for="sprite2x">for sprite@2x: </label><input id="sprite2x" class="files" type="file" multiple></h5>
+        <button id="generate">Generate</button>
+      </div>
+      <div id="result" class="section">
+      </div>
+    </div>
+
+    <script src="./src/shelf-pack/shelf-pack-browser.js"></script>
+    <script src="./src/d3-queue/d3-queue.v3.min.js"></script>
+    <script src="./src/index.js"></script>
+  </body>
+</html>

@@ -1,0 +1,24 @@
+* {
+  box-sizing: border-box;
+}
+
+.section {
+  padding: 10px;
+}
+
+.sub-section {
+  padding: 10px;
+}
+
+.left, .right {
+  float: left;
+  width: 50%;
+  height: 300px;
+  overflow: scroll;
+}
+
+.right {
+  height: 300px;
+  position: relative;
+  overflow: hidden scroll;
+}
